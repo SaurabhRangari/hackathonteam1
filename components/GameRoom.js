@@ -1,9 +1,9 @@
 // components/GameRoom.js
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 
 export default function GameRoom() {
-  const [roomStatus, setRoomStatus] = useState('waiting');
+  const [roomStatus, setRoomStatus] = useState("waiting");
   const [players, setPlayers] = useState([]);
   const router = useRouter();
   const { roomId } = router.query;
@@ -12,7 +12,6 @@ export default function GameRoom() {
     if (roomId) {
       fetchRoomStatus();
       fetchPlayers();
-      // Set up intervals to refresh room status and player list
       const statusInterval = setInterval(fetchRoomStatus, 5000);
       const playersInterval = setInterval(fetchPlayers, 5000);
       return () => {
@@ -31,32 +30,42 @@ export default function GameRoom() {
   };
 
   const fetchPlayers = async () => {
-    // Implement API call to fetch players in the room
-    // Update the 'players' state
+    if (roomId) {
+      const response = await fetch(`/api/room/players?roomId=${roomId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setPlayers(data.players);
+      } else {
+        console.error("Failed to fetch players");
+        // Optionally, handle the error (e.g., show an error message to the user)
+      }
+    }
   };
 
   const startGame = async () => {
-    await fetch('/api/room/status', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ roomId, status: 'playing' }),
+    await fetch("/api/room/status", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ roomId, status: "playing" }),
     });
-    setRoomStatus('playing');
+    setRoomStatus("playing");
   };
 
   const leaveRoom = async () => {
-    await fetch('/api/room/leave', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ roomId, playerId: 'uniquePlayerId' }),
+    const playerId = localStorage.getItem("playerId"); // Assume we store playerId in localStorage when joining
+    await fetch("/api/room/leave", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ roomId, playerId }),
     });
-    router.push('/');
+    router.push("/");
   };
 
-  if (roomStatus === 'waiting') {
+  if (roomStatus === "waiting") {
     return (
       <div>
-        <h1>Waiting Room: {roomId}</h1>
+         <h1>Room: {roomId}</h1>
+         <p>Share this Room ID with your friends: {roomId}</p>
         <p>Players: {players.length}/16</p>
         <ul>
           {players.map((player) => (
@@ -67,7 +76,7 @@ export default function GameRoom() {
         <button onClick={leaveRoom}>Leave Room</button>
       </div>
     );
-  } else if (roomStatus === 'playing') {
+  } else if (roomStatus === "playing") {
     return <div>Game in progress...</div>;
   }
 

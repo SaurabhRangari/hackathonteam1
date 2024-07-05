@@ -1,22 +1,29 @@
-// utils/roomManager.js
+const crypto = require('crypto');
+
 const rooms = {};
 
-function createRoom(roomId) {
-  rooms[roomId] = {
-    players: [],
-    maxPlayers: 16,
-    status: 'waiting', // waiting, playing, finished
-  };
-  return rooms[roomId];
+function generateRoomId() {
+  return crypto.randomBytes(4).toString('hex');
 }
 
-function joinRoom(roomId, player) {
-  if (rooms[roomId] && rooms[roomId].players.length < rooms[roomId].maxPlayers) {
-    rooms[roomId].players.push(player);
-    return true;
+function createRoom() {
+    const roomId = generateRoomId();
+    rooms[roomId] = {
+      players: [],
+      maxPlayers: 16,
+      status: 'waiting',
+    };
+    return roomId;
   }
-  return false;
-}
+
+  function joinRoom(roomId, player) {
+    if (rooms[roomId] && rooms[roomId].players.length < rooms[roomId].maxPlayers) {
+      rooms[roomId].players.push(player);
+      return true;
+    }
+    return false;
+  }
+
 
 function leaveRoom(roomId, playerId) {
   if (rooms[roomId]) {
@@ -37,4 +44,22 @@ function setRoomStatus(roomId, status) {
   }
 }
 
-module.exports = { createRoom, joinRoom, leaveRoom, getRoomStatus, setRoomStatus };
+function getRooms() {
+    return Object.entries(rooms).map(([id, room]) => ({
+      id,
+      name: id,
+      players: room.players.length,
+      maxPlayers: room.maxPlayers,
+      status: room.status,
+    }));
+  }
+
+  module.exports = { 
+    createRoom, 
+    joinRoom, 
+    leaveRoom, 
+    getRoomStatus, 
+    setRoomStatus,
+    getRooms,
+    rooms
+  };

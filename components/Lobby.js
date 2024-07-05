@@ -1,44 +1,48 @@
 // components/Lobby.js
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/router';
 
 export default function Lobby() {
-  const [rooms, setRooms] = useState([]);
-  const [newRoomName, setNewRoomName] = useState('');
+  const [playerName, setPlayerName] = useState('');
+  const [roomId, setRoomId] = useState('');
   const router = useRouter();
 
-  useEffect(() => {
-    // Fetch available rooms
-    fetchRooms();
-    // Set up interval to refresh room list
-    const interval = setInterval(fetchRooms, 5000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const fetchRooms = async () => {
-    // Implement API call to fetch available rooms
-    // Update the 'rooms' state
-  };
-
   const createRoom = async () => {
-    const response = await fetch('/api/room/create', {
+    if (!playerName) {
+      alert('Please enter your name');
+      return;
+    }
+    const createResponse = await fetch('/api/room/create', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ roomId: newRoomName }),
+      body: JSON.stringify({}),
     });
-    if (response.ok) {
-      router.push(`/game/${newRoomName}`);
+    if (createResponse.ok) {
+      const { roomId } = await createResponse.json();
+      joinRoom(roomId);
+    } else {
+      alert('Failed to create a room. Please try again.');
     }
   };
 
-  const joinRoom = async (roomId) => {
+  const joinRoom = async (id) => {
+    if (!playerName) {
+      alert('Please enter your name before joining a room');
+      return;
+    }
+    if (!id) {
+      alert('Please enter a room ID');
+      return;
+    }
     const response = await fetch('/api/room/join', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ roomId, player: { id: 'uniquePlayerId', name: 'PlayerName' } }),
+      body: JSON.stringify({ roomId: id, player: { id: Date.now().toString(), name: playerName } }),
     });
     if (response.ok) {
-      router.push(`/game/${roomId}`);
+      router.push(`/game/${id}`);
+    } else {
+      alert('Failed to join the room. It might be full or no longer available.');
     }
   };
 
@@ -48,21 +52,23 @@ export default function Lobby() {
       <div>
         <input
           type="text"
-          value={newRoomName}
-          onChange={(e) => setNewRoomName(e.target.value)}
-          placeholder="Enter room name"
+          value={playerName}
+          onChange={(e) => setPlayerName(e.target.value)}
+          placeholder="Enter your name"
         />
-        <button onClick={createRoom}>Create Room</button>
       </div>
-      <h2>Available Rooms</h2>
-      <ul>
-        {rooms.map((room) => (
-          <li key={room.id}>
-            {room.name} ({room.players}/{room.maxPlayers})
-            <button onClick={() => joinRoom(room.id)}>Join</button>
-          </li>
-        ))}
-      </ul>
+      <div>
+        <button onClick={createRoom}>Create New Room</button>
+      </div>
+      <div>
+        <input
+          type="text"
+          value={roomId}
+          onChange={(e) => setRoomId(e.target.value)}
+          placeholder="Enter room ID"
+        />
+        <button onClick={() => joinRoom(roomId)}>Join Room</button>
+      </div>
     </div>
   );
 }
