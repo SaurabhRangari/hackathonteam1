@@ -3,41 +3,51 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 
 export default function GameRoom() {
-  const [roomStatus, setRoomStatus] = useState("waiting");
+  const [roomStatus, setRoomStatus] = useState(null);
   const [players, setPlayers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const router = useRouter();
   const { roomId } = router.query;
 
   useEffect(() => {
+    console.log("roomId:", roomId);
     if (roomId) {
-      fetchRoomStatus();
-      fetchPlayers();
-      const statusInterval = setInterval(fetchRoomStatus, 5000);
-      const playersInterval = setInterval(fetchPlayers, 5000);
-      return () => {
-        clearInterval(statusInterval);
-        clearInterval(playersInterval);
-      };
+      fetchRoomData();
+      const interval = setInterval(fetchRoomData, 5000);
+      return () => clearInterval(interval);
     }
   }, [roomId]);
 
-  const fetchRoomStatus = async () => {
-    const response = await fetch(`/api/room/status?roomId=${roomId}`);
-    if (response.ok) {
-      const data = await response.json();
-      setRoomStatus(data.status);
-    }
-  };
-
-  const fetchPlayers = async () => {
+  const fetchRoomData = async () => {
+    console.log("Fetching room data for roomId:", roomId);
     if (roomId) {
-      const response = await fetch(`/api/room/players?roomId=${roomId}`);
-      if (response.ok) {
-        const data = await response.json();
-        setPlayers(data.players);
-      } else {
-        console.error("Failed to fetch players");
-        // Optionally, handle the error (e.g., show an error message to the user)
+      try {
+        const [statusResponse, playersResponse] = await Promise.all([
+          fetch(`/api/room/status?roomId=${roomId}`),
+          fetch(`/api/room/players?roomId=${roomId}`)
+        ]);
+        console.log("Status response:", statusResponse);
+        console.log("Players response:", playersResponse);
+
+        if (statusResponse.ok && playersResponse.ok) {
+          const statusData = await statusResponse.json();
+          const playersData = await playersResponse.json();
+          console.log("Status data:", statusData);
+          console.log("Players data:", playersData);
+
+          setRoomStatus(statusData.status);
+          setPlayers(playersData.players);
+          setError(null);
+        } else {
+          console.error("Failed to fetch room data");
+          setError("Failed to fetch room data. Please try again.");
+        }
+      } catch (error) {
+        console.error("Error fetching room data:", error);
+        setError("An error occurred while fetching room data. Please try again.");
+      } finally {
+        setLoading(false);
       }
     }
   };
@@ -52,7 +62,7 @@ export default function GameRoom() {
   };
 
   const leaveRoom = async () => {
-    const playerId = localStorage.getItem("playerId"); // Assume we store playerId in localStorage when joining
+    const playerId = localStorage.getItem("playerId");
     await fetch("/api/room/leave", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -61,11 +71,19 @@ export default function GameRoom() {
     router.push("/");
   };
 
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (error) {
+    return <div>Error: {error}</div>;
+  }
+
   if (roomStatus === "waiting") {
     return (
       <div>
-         <h1>Room: {roomId}</h1>
-         <p>Share this Room ID with your friends: {roomId}</p>
+        <h1>Room: {roomId}</h1>
+        <p>Share this Room ID with your friends: {roomId}</p>
         <p>Players: {players.length}/16</p>
         <ul>
           {players.map((player) => (
@@ -80,5 +98,5 @@ export default function GameRoom() {
     return <div>Game in progress...</div>;
   }
 
-  return <div>Loading...</div>;
+  return <div>Error: Invalid room status (Status: {roomStatus})</div>;
 }

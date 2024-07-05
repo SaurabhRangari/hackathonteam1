@@ -1,4 +1,4 @@
-import { rooms } from '../../../utils/roomManager';
+import { getRoomStatus } from '../../../utils/roomManager';
 
 export default function handler(req, res) {
   const { roomId } = req.query;
@@ -7,11 +7,11 @@ export default function handler(req, res) {
     return res.status(400).json({ error: 'Room ID is required' });
   }
 
-  const room = rooms[roomId];
+  const status = getRoomStatus(roomId);
 
-  if (!room) {
+  if (status === null) {
     return res.status(404).json({ error: 'Room not found' });
   }
 
-  res.status(200).json({ players: room.players });
+  res.status(200).json({ status });
 }
